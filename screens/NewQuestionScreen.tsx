@@ -18,11 +18,16 @@ import {
   Divider,
 } from "react-native-paper";
 import DropDown from "react-native-paper-dropdown";
+import { AdvancedImage } from "cloudinary-react-native";
+import { Cloudinary } from "@cloudinary/url-gen";
+import { uploadToCloudinary } from "../ cloudinaryConfig";
+import { compressImage } from "../util/ImageProcessing";
 
 type Props = ScreenProps<"NewQuestion">;
 
 const NewQuestionScreen: React.FC<Props> = ({ route, navigation }) => {
   const [image, setImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   const [topic, setTopic] = useState<string | undefined>(undefined);
   const [header, setHeader] = useState<string | undefined>(undefined);
@@ -52,6 +57,27 @@ const NewQuestionScreen: React.FC<Props> = ({ route, navigation }) => {
   const selectTopic = (selectedTopic: string) => {
     setTopic(selectedTopic);
     setTopicVisible(false);
+  };
+
+  const handleSubmit = async () => {
+    let imageLink = "";
+
+    console.log(image == null ? "no image" : "imageLink: " + image);
+
+    // if an image is attached, then we call uploadToCloudinary function
+    if (image != null) {
+      try {
+        const compressedImage = await compressImage(image);
+        try {
+          const response = await uploadToCloudinary(compressedImage, "default");
+          console.log("Upload successful:", response);
+        } catch (uploadError) {
+          console.error("Upload failed:", uploadError);
+        }
+      } catch (error) {
+        console.error("Image compression failed:", error);
+      }
+    }
   };
 
   return (
@@ -109,7 +135,7 @@ const NewQuestionScreen: React.FC<Props> = ({ route, navigation }) => {
       <Button
         icon="upload"
         mode="contained"
-        onPress={() => {}}
+        onPress={handleSubmit}
         style={styles.submitButton}
         labelStyle={styles.buttonText}
       >
