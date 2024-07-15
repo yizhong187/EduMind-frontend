@@ -1,10 +1,13 @@
-import { View, Button, ScrollView } from "react-native";
+import { View, Button, ScrollView, Alert } from "react-native";
 import React, { useEffect, useState } from "react";
 import { ScreenProps } from "../navigation/types";
 import { useStudentAuth } from "../hooks/useStudentAuth";
 import { customText } from "react-native-paper";
 import AskNow from "../components/AskNow";
 import ChatCard from "../components/ChatCard";
+import { Chat, parseChat } from "../models/ChatModel";
+import apiClient from "../util/apiClient";
+import axios from "axios";
 
 const Text = customText<"customVariant">();
 
@@ -12,12 +15,39 @@ type Props = ScreenProps<"Home">;
 
 const HomeScreen: React.FC<Props> = ({ route, navigation }) => {
   const { student, loading } = useStudentAuth();
+  const [chats, setChats] = useState<Chat[]>([]);
+
   useEffect(() => {
     if (!loading && !student) {
-      // Redirect logic here, for example, navigate to a login screen
       navigation.navigate("StudentLogin");
     }
   }, [loading, student]);
+
+  useEffect(() => {
+    const fetchChats = async () => {
+      try {
+        const response = await apiClient.get("/chat", {});
+        if (response.status === 200) {
+          console.log("Chats fetched successfully:", response.data);
+          const parsedChats = response.data.map(parseChat);
+          setChats(parsedChats);
+        } else {
+          console.error("Failed to fetch chat");
+          Alert.alert("Failed to fetprasedch chat");
+        }
+      } catch (err: any) {
+        const errorMessage = axios.isAxiosError(err)
+          ? err.response?.data?.message ||
+            "Failed to fetch chat due to network error"
+          : err.message || "An unexpected error occurred";
+
+        console.error("Error fetching chat:", errorMessage);
+        Alert.alert("Error", errorMessage);
+      }
+    };
+
+    fetchChats();
+  }, []);
 
   if (loading) {
     return <Text variant="bodyLarge">Loading...</Text>;
@@ -28,66 +58,16 @@ const HomeScreen: React.FC<Props> = ({ route, navigation }) => {
       <Text variant="headlineLarge">This will be the HomeScreen</Text>
       <Text variant="bodyLarge">{student?.username} is logged in.</Text>
       <AskNow navigation={navigation} />
-      <ChatCard
-        photoUrl={
-          "https://www.google.com/url?sa=i&url=https%3A%2F%2Fmedium.com%2F%40allrounddiksha%2Fwhat-is-react-native-1d564da4a3bd&psig=AOvVaw2duOUqnu13cR4z1DPgNrYo&ust=1718852819536000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCMi-te_X5oYDFQAAAAAdAAAAABAE"
-        }
-        title={"What is React Native?"}
-        latestMessage={
-          "React Native is a framework for building native apps using React."
-        }
-        navigation={navigation}
-      />
-      <ChatCard
-        photoUrl={
-          "https://www.google.com/url?sa=i&url=https%3A%2F%2Fmedium.com%2F%40allrounddiksha%2Fwhat-is-react-native-1d564da4a3bd&psig=AOvVaw2duOUqnu13cR4z1DPgNrYo&ust=1718852819536000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCMi-te_X5oYDFQAAAAAdAAAAABAE"
-        }
-        title={"What is React Native?"}
-        latestMessage={
-          "React Native is a framework for building native apps using React."
-        }
-        navigation={navigation}
-      />
-      <ChatCard
-        photoUrl={
-          "https://www.google.com/url?sa=i&url=https%3A%2F%2Fmedium.com%2F%40allrounddiksha%2Fwhat-is-react-native-1d564da4a3bd&psig=AOvVaw2duOUqnu13cR4z1DPgNrYo&ust=1718852819536000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCMi-te_X5oYDFQAAAAAdAAAAABAE"
-        }
-        title={"What is React Native?"}
-        latestMessage={
-          "React Native is a framework for building native apps using React."
-        }
-        navigation={navigation}
-      />
-      <ChatCard
-        photoUrl={
-          "https://www.google.com/url?sa=i&url=https%3A%2F%2Fmedium.com%2F%40allrounddiksha%2Fwhat-is-react-native-1d564da4a3bd&psig=AOvVaw2duOUqnu13cR4z1DPgNrYo&ust=1718852819536000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCMi-te_X5oYDFQAAAAAdAAAAABAE"
-        }
-        title={"What is React Native?"}
-        latestMessage={
-          "React Native is a framework for building native apps using React."
-        }
-        navigation={navigation}
-      />
-      <ChatCard
-        photoUrl={
-          "https://www.google.com/url?sa=i&url=https%3A%2F%2Fmedium.com%2F%40allrounddiksha%2Fwhat-is-react-native-1d564da4a3bd&psig=AOvVaw2duOUqnu13cR4z1DPgNrYo&ust=1718852819536000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCMi-te_X5oYDFQAAAAAdAAAAABAE"
-        }
-        title={"What is React Native?"}
-        latestMessage={
-          "React Native is a framework for building native apps using React."
-        }
-        navigation={navigation}
-      />
-      <ChatCard
-        photoUrl={
-          "https://www.google.com/url?sa=i&url=https%3A%2F%2Fmedium.com%2F%40allrounddiksha%2Fwhat-is-react-native-1d564da4a3bd&psig=AOvVaw2duOUqnu13cR4z1DPgNrYo&ust=1718852819536000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCMi-te_X5oYDFQAAAAAdAAAAABAE"
-        }
-        title={"What is React Native?"}
-        latestMessage={
-          "React Native is a framework for building native apps using React."
-        }
-        navigation={navigation}
-      />
+      {chats.map((chat) => (
+        <ChatCard
+          chatId={chat.chat_id}
+          key={chat.chat_id}
+          photoUrl={chat.photo_url || ""}
+          title={chat.header}
+          latestMessage={chat.subject}
+          navigation={navigation}
+        />
+      ))}
     </ScrollView>
   );
 };
