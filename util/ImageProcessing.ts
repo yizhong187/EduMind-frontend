@@ -9,7 +9,7 @@ export const compressImage = (uri: string): Promise<string> => {
       uri,
       async (width, height) => {
         try {
-          const quality = 60;
+          const quality = 5;
           console.log(ImageResizer)
           const response = await ImageResizer.createResizedImage(
             uri,
