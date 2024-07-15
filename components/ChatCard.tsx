@@ -3,26 +3,36 @@ import { StyleSheet, View, Image, TouchableOpacity } from "react-native";
 import { Card, Text, Title } from "react-native-paper";
 
 interface ChatCardProps {
-  photoUrl: string;
+  chatId: number;
+  photoUrl?: string | null;
   title: string;
   latestMessage: string;
   navigation: any;
 }
 
 const ChatCard: React.FC<ChatCardProps> = ({
+  chatId,
   photoUrl,
   title,
   latestMessage,
   navigation,
 }) => {
   return (
-    <TouchableOpacity onPress={() => navigation.navigate("Chat")}>
+    <TouchableOpacity onPress={() => navigation.navigate("Chat", { chatId })}>
       <Card style={styles.card}>
         <View style={styles.container}>
-          <Image source={{ uri: photoUrl }} style={styles.photo} />
+          {photoUrl ? (
+            <Image source={{ uri: photoUrl }} style={styles.photo} />
+          ) : (
+            <View style={styles.placeholder} />
+          )}
           <View style={styles.textContainer}>
-            <Title style={styles.title}>{title}</Title>
-            <Text style={styles.latestMessage}>{latestMessage}</Text>
+            <Title style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+              {title}
+            </Title>
+            <Text style={styles.latestMessage} numberOfLines={2}>
+              {latestMessage}
+            </Text>
           </View>
         </View>
       </Card>
@@ -57,6 +67,13 @@ const styles = StyleSheet.create({
   latestMessage: {
     fontSize: 14,
     color: "gray",
+  },
+  placeholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    margin: 8,
+    backgroundColor: "lightgray",
   },
 });
 
