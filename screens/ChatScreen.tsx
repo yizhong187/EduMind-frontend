@@ -7,9 +7,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type Props = ScreenProps<"Chat">;
 
 const ChatScreen: React.FC<Props> = ({ route, navigation }) => {
+  const { chatId } = route.params;
+
   return (
     <View>
-      <Text>This will be the ChatScreen</Text>
+      <Text>This will be the for chat {chatId}</Text>
     </View>
   );
 };
