@@ -6,6 +6,7 @@ export interface Chat {
   subject: string;
   topic: string | null; // sql.NullString represented as a nullable string
   header: string;
+  photo_url: string | null; // sql.NullString represented as a nullable string
   completed: boolean;
 }
 
@@ -18,6 +19,7 @@ export function parseChat(json: any): Chat {
     subject: json.subject,
     topic: json.topic.Valid ? json.topic.String : null, // Handle nullable topic
     header: json.header,
+    photo_url: json.photo_url.Valid ? json.photo_url.String : null, // Handle nullable topic
     completed: json.completed
   };
 }
