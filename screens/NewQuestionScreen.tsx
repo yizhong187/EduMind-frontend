@@ -1,27 +1,13 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  Alert,
-  StyleSheet,
-  Dimensions,
-} from "react-native";
+import { View, ScrollView, Image, StyleSheet, Alert } from "react-native";
 import React, { useState } from "react";
 import { ScreenProps } from "../navigation/types";
 import * as ImagePicker from "expo-image-picker";
-import {
-  Button,
-  TextInput,
-  HelperText,
-  Menu,
-  Divider,
-} from "react-native-paper";
+import { Button, TextInput } from "react-native-paper";
 import DropDown from "react-native-paper-dropdown";
-import { AdvancedImage } from "cloudinary-react-native";
-import { Cloudinary } from "@cloudinary/url-gen";
 import { uploadToCloudinary } from "../ cloudinaryConfig";
 import { compressImage } from "../util/ImageProcessing";
+import axios from "axios";
+import apiClient from "../util/apiClient";
 
 type Props = ScreenProps<"NewQuestion">;
 
@@ -29,9 +15,9 @@ const NewQuestionScreen: React.FC<Props> = ({ route, navigation }) => {
   const [image, setImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
-  const [topic, setTopic] = useState<string | undefined>(undefined);
-  const [header, setHeader] = useState<string | undefined>(undefined);
-  const [message, setMessage] = useState<string | undefined>(undefined);
+  const [subject, setSubject] = useState<string | undefined>(undefined);
+  const [header, setHeader] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -46,23 +32,22 @@ const NewQuestionScreen: React.FC<Props> = ({ route, navigation }) => {
       setAspectRatio(ratio);
     }
   };
-  const topics = ["Chemistry", "Physics", "Math"];
+  const subjects = ["Chemistry", "Physics", "Math"];
 
-  const [topicVisible, setTopicVisible] = useState(false);
+  const [subjectVisible, setSubjectVisible] = useState(false);
 
-  const openTopicMenu = () => setTopicVisible(true);
+  const openSubjectMenu = () => setSubjectVisible(true);
 
-  const closeTopicMenu = () => setTopicVisible(false);
+  const closeSubjectMenu = () => setSubjectVisible(false);
 
-  const selectTopic = (selectedTopic: string) => {
-    setTopic(selectedTopic);
-    setTopicVisible(false);
+  const selectSubject = (selectedSubject: string) => {
+    setSubject(selectedSubject);
+    setSubjectVisible(false);
   };
 
   const handleSubmit = async () => {
     let imageLink = "";
-
-    console.log(image == null ? "no image" : "imageLink: " + image);
+    let chatID = -1;
 
     // if an image is attached, then we call uploadToCloudinary function
     if (image != null) {
@@ -70,14 +55,70 @@ const NewQuestionScreen: React.FC<Props> = ({ route, navigation }) => {
         const compressedImage = await compressImage(image);
         try {
           const response = await uploadToCloudinary(compressedImage, "default");
-          console.log("Upload successful:", response);
+          console.log("Image Upload successful");
+          imageLink = response.secure_url;
         } catch (uploadError) {
           console.error("Upload failed:", uploadError);
+          Alert.alert("Image uploading failed");
+          return;
         }
       } catch (error) {
         console.error("Image compression failed:", error);
+        Alert.alert("Image compression failed");
+        return;
       }
     }
+
+    // Creating new chat
+    try {
+      const response = await apiClient.post("/chat/new", {
+        subject: subject?.toLowerCase(),
+        header,
+        photo_url: imageLink,
+      });
+      if (response.status === 201) {
+        console.log("New chat created successfully: ", response.data);
+        chatID = response.data.chat_id;
+      } else {
+        console.error("Failed to create new chat");
+        Alert.alert("Failed to create new chat");
+        return;
+      }
+    } catch (err: any) {
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message ||
+          "Chat creation failed due to network error"
+        : err.message || "An unexpected error occurred";
+      console.error("Chat creation error:", err);
+      return;
+    }
+
+    // Sending the first message
+    try {
+      const response = await apiClient.post(`/chat/${chatID}/new`, {
+        content: message,
+      });
+      if (response.status === 201) {
+        console.log("First message sent successfully: ", response.data);
+        chatID = response.data.chat_id;
+      } else {
+        console.error("Failed to send the first message");
+        Alert.alert("Failed to send the first message");
+        return;
+      }
+    } catch (err: any) {
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message ||
+          "Sending of first message failed due to network error"
+        : err.message || "An unexpected error occurred";
+      console.error("Message sending error:", err);
+      return;
+    }
+
+    Alert.alert("Question submitted successfully!");
+    setImage(null);
+    setHeader("");
+    setMessage("");
   };
 
   return (
@@ -100,16 +141,16 @@ const NewQuestionScreen: React.FC<Props> = ({ route, navigation }) => {
       </View>
       <View style={styles.inputContainer}>
         <DropDown
-          label="Topic"
+          label="Subject"
           mode="outlined"
-          visible={topicVisible}
-          showDropDown={openTopicMenu}
-          onDismiss={closeTopicMenu}
-          value={topic ? topic : "Select Topic"}
-          setValue={setTopic}
-          list={topics.map((topicOption) => ({
-            label: topicOption,
-            value: topicOption,
+          visible={subjectVisible}
+          showDropDown={openSubjectMenu}
+          onDismiss={closeSubjectMenu}
+          value={subject ? subject : "Select Subject"}
+          setValue={setSubject}
+          list={subjects.map((subjectOption) => ({
+            label: subjectOption,
+            value: subjectOption,
           }))}
         />
 
