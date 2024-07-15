@@ -6,8 +6,9 @@ import React, {
   ReactNode,
 } from "react";
 import { Student } from "../models/StudentModel";
-import { getToken, removeToken } from "../util/TokenHandling";
+import { getToken, removeToken, saveToken } from "../util/TokenHandling";
 import axios from "axios";
+import apiClient from "../util/apiClient";
 
 interface StudentAuthContextType {
   student: Student | null;
@@ -42,9 +43,7 @@ export const StudentAuthProvider = ({ children }: StudentAuthProviderProps) => {
       if (token) {
         try {
           // Fetch user data using the token
-          const response = await axios.get(
-            "https://edumind-3587039ec3f2.herokuapp.com/v1/students/profile"
-          );
+          const response = await apiClient.get("/students/profile");
           setStudent(response.data);
         } catch (error) {
           console.error("Error fetching user:", error);
@@ -74,7 +73,6 @@ export const StudentAuthProvider = ({ children }: StudentAuthProviderProps) => {
         }
       );
       if (response.status === 201) {
-        setStudent(response.data);
         return [true, "Registration successful!"];
       } else {
         return [false, "Registration failed"];
@@ -97,17 +95,25 @@ export const StudentAuthProvider = ({ children }: StudentAuthProviderProps) => {
   ): Promise<[boolean, string]> => {
     setLoading(true);
     try {
-      const response = await axios.post(
-        "https://edumind-3587039ec3f2.herokuapp.com/v1/login",
-        {
-          username,
-          password,
-        }
-      );
+      const response = await apiClient.post("/login", {
+        username,
+        password,
+      });
       if (response.status === 200) {
         // Assuming the API returns user data upon successful login
-        setStudent(response.data.user);
-        return [true, "Login successful"];
+        const { user, token } = response.data;
+        if (user.type === "student") {
+          await saveToken(token);
+          try {
+            const profileResponse = await apiClient.get("/students/profile");
+            setStudent(profileResponse.data);
+          } catch (profileError) {
+            console.error("Error fetching user profile:", profileError);
+            return [false, "Login successful, but failed to fetch profile"];
+          }
+          return [true, "Login successful"];
+        }
+        return [false, "Incorrect user type"];
       } else {
         return [false, "Login failed"];
       }
